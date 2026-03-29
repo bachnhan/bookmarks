@@ -1,19 +1,24 @@
 {
-  "name": "react-example",
+  "name": "the-archivist",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "A minimalist private bookmarking system",
   "type": "module",
   "scripts": {
     "dev": "vite --port=3000 --host=0.0.0.0",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "db:setup": "tsx scripts/setup-neon.ts",
+    "db:seed": "node scripts/upload-supabase.js"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
+    "@neondatabase/serverless": "^1.0.2",
+    "@supabase/supabase-js": "^2.100.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "better-auth": "^1.5.6",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
