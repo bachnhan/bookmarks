@@ -334,21 +334,42 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <h3 className="text-[10px] font-black text-blue-600/40 uppercase tracking-[0.2em]">System</h3>
           </div>
 
-          <div 
-            ref={setUnsortedDropRef}
-            onClick={() => onSelectFolder('__unsorted__')}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 relative ${activeFolderId === '__unsorted__' ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 font-black' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold'} ${isOverUnsorted ? 'ring-2 ring-blue-500 ring-inset bg-blue-50/50' : ''}`}
-          >
-            <Inbox size={18} className={activeFolderId === '__unsorted__' ? 'text-white' : 'text-blue-500/60'} />
-            <span className="text-[14px]">Unsorted</span>
-          </div>
+          <div className="space-y-1">
+            {/* Master Library View (All non-archived) */}
+            <button 
+              onClick={() => onSelectFolder(null)}
+              className={`flex items-center gap-3 w-full p-3 rounded-2xl transition-all ${!activeFolderId && !isArchivedActive ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 ring-4 ring-blue-600/30 -translate-y-0.5' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              <div className={`p-1.5 rounded-xl ${!activeFolderId && !isArchivedActive ? 'bg-white/20' : 'bg-blue-50'}`}>
+                <Layers size={18} className={!activeFolderId && !isArchivedActive ? 'text-white' : 'text-blue-600'} />
+              </div>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em]">The Library</span>
+            </button>
 
-          <div 
-            onClick={onSelectArchived}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-200 ${isArchivedActive ? 'bg-slate-900 text-white shadow-lg font-black' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold'}`}
-          >
-            <Archive size={18} className={isArchivedActive ? 'text-white' : 'text-slate-400'} />
-            <span className="text-[14px]">Archived</span>
+            {/* Unsorted View (Inbox - folder_id is NULL) */}
+            <div 
+              ref={setUnsortedDropRef}
+              onClick={() => onSelectFolder('__unsorted__')}
+              className={`flex items-center gap-3 w-full p-3 rounded-2xl cursor-pointer transition-all ${activeFolderId === '__unsorted__' ? 'bg-blue-600 text-white shadow-xl shadow-blue-100 ring-4 ring-blue-600/30 -translate-y-0.5' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              <div className={`p-1.5 rounded-xl ${activeFolderId === '__unsorted__' ? 'bg-white/20' : 'bg-blue-50'}`}>
+                <Inbox size={18} className={activeFolderId === '__unsorted__' ? 'text-white' : 'text-blue-600'} />
+              </div>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em]">Unsorted</span>
+              {isOverUnsorted && (
+                <div className="absolute inset-0 ring-2 ring-blue-400 ring-inset rounded-2xl animate-pulse" />
+              )}
+            </div>
+
+            <div 
+              onClick={onSelectArchived}
+              className={`flex items-center gap-3 w-full p-3 rounded-2xl cursor-pointer transition-all duration-200 ${isArchivedActive ? 'bg-slate-900 text-white shadow-lg font-black -translate-y-0.5' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 font-bold'}`}
+            >
+              <div className={`p-1.5 rounded-xl ${isArchivedActive ? 'bg-white/20' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                <Archive size={18} className={isArchivedActive ? 'text-white' : 'text-slate-400'} />
+              </div>
+              <span className="text-[11px] font-black uppercase tracking-[0.2em]">Archived</span>
+            </div>
           </div>
 
           <div className="pt-8 pb-3 px-3 flex items-center justify-between group/header rounded-xl transition-all">
