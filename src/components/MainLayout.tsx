@@ -104,7 +104,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           }
 
           setProcessingFolderIds([activeId]);
-          const newParentId = (overId === 'null' || overId === 'root' || overId === 'root-bottom' || overId === 'root-sidebar') ? null : (overId as string);
+          const newParentId = (overId === 'null' || overId === 'root') ? null : (overId as string);
           
           await bookmarkService.updateFolder(activeId, { 
             parent_id: newParentId 
