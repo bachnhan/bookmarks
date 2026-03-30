@@ -40,7 +40,7 @@ const CardActions: React.FC<{
   const isArchived = bookmark.isArchived;
 
   return (
-    <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity relative">
+    <div className="flex items-center gap-0 opacity-0 group-hover:opacity-100 transition-opacity relative">
       {onToggleStar && (
         <button 
           onClick={(e) => { e.stopPropagation(); onToggleStar(e); }}
@@ -190,32 +190,41 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
       onClick={onClick}
       className={`bg-white dark:bg-slate-900 rounded-2xl group active:scale-[0.98] transition-all duration-300 cursor-pointer border border-slate-200/60 dark:border-slate-800 hover:shadow-2xl hover:shadow-blue-500/5 hover:border-blue-500/20 flex flex-col h-full relative ${showMoveMenu ? 'z-40 shadow-2xl' : 'z-0'} ${isDragging ? 'z-50 shadow-2xl scale-105 opacity-50 ring-2 ring-blue-500/50' : ''}`}
     >
-      {bookmark.imageUrl && (
-        <div className="h-40 bg-slate-100 dark:bg-slate-800 overflow-hidden relative rounded-t-2xl">
-          <img src={bookmark.imageUrl} alt="Preview" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
-          {bookmark.isStarred && (
-            <div className="absolute top-3 left-3 bg-amber-400 text-white p-1 rounded-md shadow-lg">
-              <Star size={12} className="fill-white" />
-            </div>
-          )}
-        </div>
-      )}
-      <div className="p-5 flex flex-col flex-1">
+      {/* Container for image - must have overflow hidden for rounded top */}
+      <div className="overflow-hidden rounded-t-2xl">
+        {bookmark.imageUrl && (
+          <div className="h-40 bg-slate-100 dark:bg-slate-800 relative">
+            <img src={bookmark.imageUrl} alt="Preview" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
+            {bookmark.isStarred && (
+              <div className="absolute top-3 left-3 bg-amber-400 text-white p-1 rounded-md shadow-lg">
+                <Star size={12} className="fill-white" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="p-5 flex flex-col flex-1 relative">
+        {/* Header must NOT have overflow hidden to allow dropdown to pop out */}
         {commonHeader}
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 tracking-tight leading-tight line-clamp-2">
-          {bookmark.title}
-        </h2>
-        <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 line-clamp-2 leading-relaxed">
-          {bookmark.description}
-        </p>
         
-        <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-800/50 flex items-center justify-between">
-          <span className="text-[10px] font-bold text-slate-400">
-            {new Date(bookmark.addedAt).toLocaleDateString()}
-          </span>
-          <div className="flex items-center gap-1 text-blue-600/60 opacity-0 group-hover:opacity-100 transition-opacity">
-            <span className="text-[10px] font-black uppercase tracking-wider">Expand</span>
-            <ChevronRight size={14} />
+        {/* Rest of content can be clipped if needed, but relative for layout */}
+        <div className="flex flex-col flex-1 overflow-hidden">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-2 tracking-tight leading-tight line-clamp-2">
+            {bookmark.title}
+          </h2>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-4 line-clamp-2 leading-relaxed">
+            {bookmark.description}
+          </p>
+          
+          <div className="mt-auto pt-4 border-t border-slate-50 dark:border-slate-800/50 flex items-center justify-between">
+            <span className="text-[10px] font-bold text-slate-400">
+              {new Date(bookmark.addedAt).toLocaleDateString()}
+            </span>
+            <div className="flex items-center gap-1 text-blue-600/60 opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="text-[10px] font-black uppercase tracking-wider">Expand</span>
+              <ChevronRight size={14} />
+            </div>
           </div>
         </div>
       </div>
