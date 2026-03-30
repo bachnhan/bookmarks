@@ -94,24 +94,26 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       const activeFolder = folders.find(f => f.id === activeId);
       if (!activeFolder) return;
 
-      const isDroppingOnDifferentFolder = over.data.current?.type === 'folder';
+      const isRootTarget = overId === 'root' || overId === 'null';
+      const isFolderTarget = over.data.current?.type === 'folder';
       
-      if (isDroppingOnDifferentFolder) {
+      if (isRootTarget || isFolderTarget) {
         try {
-          if (overId !== null && overId !== 'root' && overId !== 'root-bottom' && isDescendant(folders, activeId, overId)) {
+          // If nesting, safety check for sub-folders
+          if (isFolderTarget && isDescendant(folders, activeId, overId)) {
             console.warn('Cannot nest a folder inside one of its own sub-folders');
             return;
           }
 
           setProcessingFolderIds([activeId]);
-          const newParentId = (overId === 'null' || overId === 'root') ? null : (overId as string);
+          const newParentId = isRootTarget ? null : (overId as string);
           
           await bookmarkService.updateFolder(activeId, { 
             parent_id: newParentId 
           });
           if (onRefreshFolders) await onRefreshFolders();
         } catch (err) {
-          console.error('Failed to nest folder via DND:', err);
+          console.error('Failed to update folder position via DND:', err);
         } finally {
           setProcessingFolderIds([]);
         }
