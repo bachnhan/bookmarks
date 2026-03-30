@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "netlify dev",
     "dev:vite": "vite --port=5173 --host=0.0.0.0",
-    "build": "vite build",
+    "build": "vite build && echo '/* /index.html 200' > dist/_redirects",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
