@@ -9,7 +9,8 @@ import {
   X,
   Inbox,
   Trash2,
-  FolderPlus
+  FolderPlus,
+  Loader2
 } from 'lucide-react';
 import { Folder } from '../types';
 import { bookmarkService } from '../services/bookmarkService';
@@ -30,6 +31,7 @@ interface SidebarProps {
   folders: Folder[];
   onFoldersChange: (newFolders: Folder[]) => void;
   onRefreshFolders?: () => void;
+  processingFolderIds?: string[];
 }
 
 interface SortableFolderItemProps {
@@ -38,6 +40,7 @@ interface SortableFolderItemProps {
   isExpanded: boolean;
   hasChildren: boolean;
   level: number;
+  isBranchProcessing: boolean;
   onSelect: (id: string) => void;
   onToggle: (e: React.MouseEvent, id: string) => void;
   onDelete: (e: React.MouseEvent, id: string) => void;
@@ -45,7 +48,7 @@ interface SortableFolderItemProps {
 }
 
 const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
-  folder, isActive, isExpanded, hasChildren, level, onSelect, onToggle, onDelete, onAddSubFolder
+  folder, isActive, isExpanded, hasChildren, level, isBranchProcessing, onSelect, onToggle, onDelete, onAddSubFolder
 }) => {
   const {
     attributes,
@@ -56,6 +59,7 @@ const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
     isDragging
   } = useSortable({ 
     id: folder.id,
+    disabled: isBranchProcessing,
     data: {
       type: 'folder',
       folder
@@ -64,6 +68,7 @@ const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
 
   const { setNodeRef: setDropRef, isOver } = useDroppable({
     id: folder.id,
+    disabled: isBranchProcessing,
     data: {
       type: 'folder',
       folder
@@ -80,8 +85,9 @@ const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
     transform: CSS.Translate.toString(transform),
     transition,
     paddingLeft: `${(level * 12) + 12}px`,
-    opacity: isDragging ? 0.4 : 1,
+    opacity: isDragging ? 0.4 : isBranchProcessing ? 0.7 : 1,
     zIndex: isDragging ? 10 : 1,
+    pointerEvents: (isBranchProcessing ? 'none' : 'auto') as any
   };
 
   return (
@@ -90,13 +96,14 @@ const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
       style={style}
       {...attributes}
       {...listeners}
-      onClick={() => onSelect(folder.id)}
+      onClick={() => !isBranchProcessing && onSelect(folder.id)}
       className={`
         group flex items-center justify-between px-3 py-2 rounded-xl cursor-grab transition-all duration-200 relative
         ${isActive 
           ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none font-bold' 
           : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium'}
         ${isOver && !isActive ? 'ring-2 ring-blue-500 ring-inset bg-blue-50/50' : ''}
+        ${isBranchProcessing ? 'grayscale' : ''}
       `}
     >
       <div className="flex items-center gap-2 overflow-hidden pointer-events-none">
@@ -105,12 +112,17 @@ const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
             <button 
               onClick={(e) => onToggle(e, folder.id)}
               className={`p-0.5 rounded transition-colors ${isActive ? 'hover:bg-blue-500 text-blue-100' : 'hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400'}`}
+              disabled={isBranchProcessing}
             >
               {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
           )}
         </div>
-        <FolderIcon size={18} className={isActive ? 'text-white' : 'text-blue-500/60'} />
+        {isBranchProcessing ? (
+          <Loader2 size={18} className={`animate-spin ${isActive ? 'text-white' : 'text-blue-500'}`} />
+        ) : (
+          <FolderIcon size={18} className={isActive ? 'text-white' : 'text-blue-500/60'} />
+        )}
         <span className="text-[14px] truncate">{folder.name}</span>
       </div>
       
@@ -118,12 +130,14 @@ const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
         <button 
           onClick={(e) => { e.stopPropagation(); onAddSubFolder(folder.id); }}
           className={`p-1 rounded-md transition-colors pointer-events-auto ${isActive ? 'hover:bg-blue-500 text-blue-100' : 'hover:bg-blue-50 text-blue-400'}`}
+          disabled={isBranchProcessing}
         >
           <FolderPlus size={14} />
         </button>
         <button 
           onClick={(e) => onDelete(e, folder.id)}
           className={`p-1 rounded-md transition-colors pointer-events-auto ${isActive ? 'hover:bg-blue-500 text-blue-100' : 'hover:bg-red-50 text-red-400'}`}
+          disabled={isBranchProcessing}
         >
           <Trash2 size={14} />
         </button>
@@ -142,7 +156,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isArchivedActive,
   folders = [],
   onFoldersChange,
-  onRefreshFolders
+  onRefreshFolders,
+  processingFolderIds = []
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(true);
@@ -153,6 +168,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const { setNodeRef: setUnsortedDropRef, isOver: isOverUnsorted } = useDroppable({
     id: 'null',
     data: { type: 'folder', folder: { id: null, name: 'Unsorted' } }
+  });
+
+  const { setNodeRef: setRootDropRef, isOver: isOverRoot } = useDroppable({
+    id: 'root',
+    data: { type: 'folder', folder: { id: null, name: 'Root' } }
+  });
+
+  const { setNodeRef: setRootBottomDropRef, isOver: isOverRootBottom } = useDroppable({
+    id: 'root-bottom',
+    data: { type: 'folder', folder: { id: null, name: 'Root' } }
   });
 
   const toggleFolder = (e: React.MouseEvent, folderId: string) => {
@@ -191,6 +216,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
     }
   };
 
+  const isFolderBranchProcessing = (folderId: string): boolean => {
+    // 1. Check if the folder itself is processing
+    if (processingFolderIds.includes(folderId)) return true;
+
+    // 2. Check if any descendant is processing
+    const hasProcessingDescendant = (id: string): boolean => {
+      const children = folders.filter(f => f.parent_id === id);
+      for (const child of children) {
+        if (processingFolderIds.includes(child.id)) return true;
+        if (hasProcessingDescendant(child.id)) return true;
+      }
+      return false;
+    };
+    if (hasProcessingDescendant(folderId)) return true;
+
+    // 3. Check if any ancestor is processing
+    const hasProcessingAncestor = (id: string): boolean => {
+      const folder = folders.find(f => f.id === id);
+      if (!folder || !folder.parent_id) return false;
+      if (processingFolderIds.includes(folder.parent_id)) return true;
+      return hasProcessingAncestor(folder.parent_id);
+    };
+    if (hasProcessingAncestor(folderId)) return true;
+
+    return false;
+  };
+
   const renderFolderItems = (parentId: string | null = null, level: number = 0) => {
     const items = folders.filter(f => f.parent_id === parentId);
     
@@ -201,6 +253,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             const hasChildren = folders.some(f => f.parent_id === folder.id);
             const isExpanded = expandedFolders.has(folder.id);
             const isActive = activeFolderId === folder.id;
+            const isProcessing = isFolderBranchProcessing(folder.id);
 
             return (
               <React.Fragment key={folder.id}>
@@ -210,6 +263,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   isExpanded={isExpanded}
                   hasChildren={hasChildren}
                   level={level}
+                  isBranchProcessing={isProcessing}
                   onSelect={onSelectFolder}
                   onToggle={toggleFolder}
                   onDelete={handleDeleteFolder}
@@ -297,7 +351,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-[14px]">Archived</span>
           </div>
 
-          <div className="pt-8 pb-3 px-3 flex items-center justify-between group/header">
+          <div 
+            ref={setRootDropRef}
+            className={`pt-8 pb-3 px-3 flex items-center justify-between group/header rounded-xl transition-colors ${isOverRoot ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20' : ''}`}
+          >
             <h3 className="text-[10px] font-black text-blue-600/40 uppercase tracking-[0.2em]">Folders</h3>
             <button 
               onClick={() => setIsAddingFolder(true)}
@@ -328,6 +385,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
           
           <div className="space-y-0.5">
             {renderFolderItems()}
+            
+            <div 
+              ref={setRootBottomDropRef}
+              className={`
+                mt-4 p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 transition-all group
+                ${isOverRootBottom 
+                  ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-xl scale-[1.02]' 
+                  : 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-700 hover:border-blue-200'
+                }
+              `}
+            >
+              <FolderIcon size={16} className={isOverRootBottom ? 'animate-bounce' : ''} />
+              <span className="text-[11px] font-black uppercase tracking-widest">Move to Root</span>
+            </div>
           </div>
         </div>
       </aside>

@@ -13,6 +13,15 @@ import {
 import { bookmarkService } from '../services/bookmarkService';
 import { Bookmark, Folder } from '../types';
 
+const isDescendant = (folders: Folder[], parentId: string | null, targetId: string): boolean => {
+  const children = folders.filter(f => f.parent_id === parentId);
+  for (const child of children) {
+    if (child.id === targetId) return true;
+    if (isDescendant(folders, child.id, targetId)) return true;
+  }
+  return false;
+};
+
 interface MainLayoutProps {
   children: ReactNode;
   onSelectFolder: (folderId: string | null) => void;
@@ -37,6 +46,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onRefreshBookmarks
 }) => {
   const [activeBookmark, setActiveBookmark] = useState<Bookmark | null>(null);
+  const [processingFolderIds, setProcessingFolderIds] = useState<string[]>([]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -82,45 +92,30 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       if (activeId === overId) return;
 
       const activeFolder = folders.find(f => f.id === activeId);
-      const overFolder = overId === 'null' ? { id: null, name: 'Root' } : folders.find(f => f.id === overId);
-
       if (!activeFolder) return;
 
-      // Case A: Moving a folder inside another (Nesting)
-      // Check if dropped ON top of another folder but NOT on its own child (prevent infinite move)
       const isDroppingOnDifferentFolder = over.data.current?.type === 'folder';
       
-      // For reordering (move before/after), we usually use SortableContext.
-      // But if user drops specifically ON another folder item:
       if (isDroppingOnDifferentFolder) {
         try {
-          // Verify it's not nesting into itself or its own sub-tree
-          const isDescendant = (parentId: string | null, targetId: string): boolean => {
-             const children = folders.filter(f => f.parent_id === parentId);
-             for (const child of children) {
-               if (child.id === targetId) return true;
-               if (isDescendant(child.id, targetId)) return true;
-             }
-             return false;
-          };
-
-          if (overId !== null && isDescendant(activeId, overId)) {
+          if (overId !== null && overId !== 'root' && overId !== 'root-bottom' && isDescendant(folders, activeId, overId)) {
             console.warn('Cannot nest a folder inside one of its own sub-folders');
             return;
           }
 
+          setProcessingFolderIds([activeId]);
+          const newParentId = (overId === 'null' || overId === 'root' || overId === 'root-bottom') ? null : (overId as string);
+          
           await bookmarkService.updateFolder(activeId, { 
-            parent_id: overId === 'null' ? null : (overId as string) 
+            parent_id: newParentId 
           });
-          if (onRefreshFolders) onRefreshFolders();
+          if (onRefreshFolders) await onRefreshFolders();
         } catch (err) {
           console.error('Failed to nest folder via DND:', err);
+        } finally {
+          setProcessingFolderIds([]);
         }
       }
-      
-      // Case B: Reordering if they have the same parent (handled by sort_order updates)
-      // Actually, if we're using SortableContext, we might need a separate updateFolderOrder call.
-      // For now, nesting is the priority fix.
     }
   };
 
@@ -139,6 +134,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           folders={folders}
           onFoldersChange={onFoldersChange}
           onRefreshFolders={onRefreshFolders}
+          processingFolderIds={processingFolderIds}
         />
         <main className="flex-1 overflow-y-auto custom-scrollbar relative">
           {children}
