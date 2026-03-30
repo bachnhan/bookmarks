@@ -98,11 +98,11 @@ const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
       {...listeners}
       onClick={() => !isBranchProcessing && onSelect(folder.id)}
       className={`
-        group flex items-center justify-between px-3 py-2 rounded-xl cursor-grab transition-all duration-200 relative
+        group flex items-center justify-between px-3 py-2 rounded-xl cursor-grab transition-all duration-300 relative
         ${isActive 
           ? 'bg-blue-600 text-white shadow-lg shadow-blue-100 dark:shadow-none font-bold' 
           : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium'}
-        ${isOver && !isActive ? 'ring-2 ring-blue-500 ring-inset bg-blue-50/50' : ''}
+        ${isOver && !isActive ? 'ring-4 ring-blue-600 ring-inset bg-blue-100/50 dark:bg-blue-900/40 shadow-2xl scale-[1.02] z-20' : ''}
         ${isBranchProcessing ? 'grayscale' : ''}
       `}
     >
@@ -353,7 +353,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div 
             ref={setRootDropRef}
-            className={`pt-8 pb-3 px-3 flex items-center justify-between group/header rounded-xl transition-colors ${isOverRoot ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500/20' : ''}`}
+            className={`pt-8 pb-3 px-3 flex items-center justify-between group/header rounded-xl transition-all ${isOverRoot ? 'bg-blue-100/50 dark:bg-blue-900/40 ring-4 ring-blue-600 shadow-xl scale-[1.02] z-20' : ''}`}
           >
             <h3 className="text-[10px] font-black text-blue-600/40 uppercase tracking-[0.2em]">Folders</h3>
             <button 
@@ -364,7 +364,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </button>
           </div>
 
-          {isAddingFolder && (
+          {isAddingFolder && addingToParent === null && (
             <div className="px-3 mb-2">
               <input
                 autoFocus
@@ -391,12 +391,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className={`
                 mt-4 p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 transition-all group
                 ${isOverRootBottom 
-                  ? 'border-blue-500 bg-blue-50 text-blue-600 shadow-xl scale-[1.02]' 
+                  ? 'border-blue-600 bg-blue-100/50 dark:bg-blue-900/40 text-blue-600 shadow-xl scale-[1.05] ring-4 ring-blue-600/20 z-20' 
                   : 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-700 hover:border-blue-200'
                 }
               `}
             >
-              <FolderIcon size={16} className={isOverRootBottom ? 'animate-bounce' : ''} />
+              <Loader2 size={16} className={isOverRootBottom ? 'animate-spin' : 'hidden'} />
+              <FolderIcon size={16} className={!isOverRootBottom ? '' : 'hidden'} />
               <span className="text-[11px] font-black uppercase tracking-widest">Move to Root</span>
             </div>
           </div>
