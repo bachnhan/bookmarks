@@ -3,7 +3,7 @@
   publish = "dist"
 
 [dev]
-  command = "npm run dev:vite"
+  command = "pnpm run dev:vite"
   port = 8888
   targetPort = 5173
   publish = "dist"

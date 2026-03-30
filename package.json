@@ -6,11 +6,11 @@
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "dev:vite": "vite --port=5173 --host=0.0.0.0",
-    "build": "vite build && echo '/* /index.html 200' > dist/_redirects",
-    "preview": "vite preview",
+    "dev:vite": "pnpm vite --port=5173 --host=0.0.0.0",
+    "build": "pnpm vite build && echo '/* /index.html 200' > dist/_redirects",
+    "preview": "pnpm vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit",
+    "lint": "pnpm tsc --noEmit",
     "db:setup": "tsx scripts/setup-neon.ts",
     "db:seed:neon": "tsx scripts/seed-neon.ts",
     "db:seed": "node scripts/upload-supabase.js"
