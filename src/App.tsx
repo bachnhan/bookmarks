@@ -21,6 +21,7 @@ export default function App() {
   const [currentView, setCurrentView] = useState<'home' | 'add' | 'profile'>('home');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [isArchivedView, setIsArchivedView] = useState(false);
+  const [refreshBookmarksTrigger, setRefreshBookmarksTrigger] = useState(0);
 
   const fetchFolders = useCallback(async () => {
     try {
@@ -60,7 +61,6 @@ export default function App() {
     setCurrentView('home');
   };
 
-  const [refreshBookmarksTrigger, setRefreshBookmarksTrigger] = useState(0);
   const handleRefreshBookmarks = () => setRefreshBookmarksTrigger(prev => prev + 1);
 
   const renderContent = () => {
