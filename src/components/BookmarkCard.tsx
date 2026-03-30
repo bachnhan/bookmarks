@@ -188,6 +188,7 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
       ref={setNodeRef}
       style={style}
       onClick={onClick}
+      onDoubleClick={() => window.open(bookmark.url, '_blank')}
       className={`bg-white dark:bg-slate-900 rounded-2xl group active:scale-[0.98] transition-all duration-300 cursor-pointer border border-slate-200/60 dark:border-slate-800 hover:shadow-2xl hover:shadow-blue-500/5 hover:border-blue-500/20 flex flex-col h-full relative ${showMoveMenu ? 'z-40 shadow-2xl' : 'z-0'} ${isDragging ? 'z-50 shadow-2xl scale-105 opacity-50 ring-2 ring-blue-500/50' : ''}`}
     >
       {/* Container for image - must have overflow hidden for rounded top */}
