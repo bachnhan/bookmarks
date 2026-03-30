@@ -381,23 +381,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
           
           <div className="relative flex-1 flex flex-col min-h-0">
+            {/* Vertical Root Drop Zone (Left Gutter) - Enhanced Visibility */}
             <div 
               ref={setRootSidebarDropRef}
               className={`
-                absolute left-0 top-0 bottom-0 w-6 -ml-1 rounded-r-xl transition-all z-10 flex items-center justify-center
+                absolute left-0 top-0 bottom-0 w-8 -ml-1 rounded-r-2xl transition-all z-10 flex flex-col items-center justify-center group/gutter
                 ${isOverRootSidebar 
-                  ? 'bg-blue-600/20 ring-4 ring-blue-600/30' 
-                  : 'bg-slate-50/50 dark:bg-slate-800/30 hover:bg-blue-50/50 border-r border-slate-100 dark:border-slate-800'
+                  ? 'bg-blue-100/50 dark:bg-blue-900/40 ring-4 ring-blue-600/30 border-r-2 border-blue-600 shadow-xl' 
+                  : 'bg-slate-50/80 dark:bg-slate-900/50 border-r-2 border-dashed border-slate-200 dark:border-slate-800'
                 }
               `}
               title="Drag here to move to Root"
             >
-              <div className={`transform -rotate-90 whitespace-nowrap text-[8px] font-black uppercase tracking-[0.3em] transition-opacity ${isOverRootSidebar ? 'text-blue-600 opacity-100' : 'text-slate-300 dark:text-slate-700 opacity-0 group-hover:opacity-100'}`}>
-                Move to Root
+              <div className={`flex flex-col items-center gap-4 transition-all ${isOverRootSidebar ? 'scale-110' : ''}`}>
+                <Layers 
+                  size={14} 
+                  className={`transition-colors ${isOverRootSidebar ? 'text-blue-600' : 'text-slate-300 dark:text-slate-700'}`} 
+                />
+                <div className={`transform -rotate-90 whitespace-nowrap text-[7px] font-black uppercase tracking-[0.4em] transition-colors ${isOverRootSidebar ? 'text-blue-600' : 'text-slate-300 dark:text-slate-700'}`}>
+                  Root Level
+                </div>
               </div>
             </div>
             
-            <div className="pl-7 space-y-0.5 overflow-y-auto custom-scrollbar">
+            <div className="pl-10 space-y-0.5 overflow-y-auto custom-scrollbar flex-1">
               {renderFolderItems()}
             </div>
           </div>

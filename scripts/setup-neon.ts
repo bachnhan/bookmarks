@@ -17,15 +17,10 @@ const sql = neon(DATABASE_URL);
 export async function createTables() {
   console.log("Setting up Neon Database tables (Fresh Start)...");
 
-  // Drop existing tables to ensure clean schema update
-  console.log("Dropping existing tables...");
-  await sql`DROP TABLE IF EXISTS bookmarks;`;
-  await sql`DROP TABLE IF EXISTS folders;`;
-
   // 1. Create folders table
-  console.log("Creating folders table...");
+  console.log("Creating folders table (if not exists)...");
   await sql`
-    CREATE TABLE folders (
+    CREATE TABLE IF NOT EXISTS folders (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name TEXT NOT NULL,
       description TEXT,
@@ -34,16 +29,15 @@ export async function createTables() {
       bgimageurl TEXT,
       parent_id UUID REFERENCES folders(id) ON DELETE CASCADE,
       sort_order INTEGER DEFAULT 0,
-      user_id UUID, 
+      user_id TEXT, 
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
-
   `;
 
   // 2. Create bookmarks table
-  console.log("Creating bookmarks table...");
+  console.log("Creating bookmarks table (if not exists)...");
   await sql`
-    CREATE TABLE bookmarks (
+    CREATE TABLE IF NOT EXISTS bookmarks (
       id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       title TEXT NOT NULL,
       description TEXT,
@@ -56,10 +50,9 @@ export async function createTables() {
       type TEXT DEFAULT 'medium',
       is_starred BOOLEAN DEFAULT FALSE,
       is_archived BOOLEAN DEFAULT FALSE,
-      user_id UUID,
+      user_id TEXT,
       folder_id UUID REFERENCES folders(id) ON DELETE SET NULL
     );
-
   `;
   
   console.log("Tables created successfully in Neon Database!");
