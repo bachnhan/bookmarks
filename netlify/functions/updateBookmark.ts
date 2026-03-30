@@ -13,32 +13,42 @@ export const handler = async (event) => {
     if (!id || !updates) return errorResponse(400, 'Missing bookmark id or updates');
 
     const sql = neon(process.env.DATABASE_URL!);
+    let updatedId: string | null = null;
 
-    // Map frontend camelCase to database snake_case where necessary
-    const dbUpdates: Record<string, any> = {};
-    if (updates.title !== undefined) dbUpdates.title = updates.title;
-    if (updates.description !== undefined) dbUpdates.description = updates.description;
-    if (updates.url !== undefined) dbUpdates.url = updates.url;
-    if (updates.folder_id !== undefined) dbUpdates.folder_id = updates.folder_id;
-    if (updates.isStarred !== undefined) dbUpdates.is_starred = updates.isStarred;
-    if (updates.isArchived !== undefined) dbUpdates.is_archived = updates.isArchived;
-
-    const fields = Object.keys(dbUpdates);
-    if (fields.length === 0) return errorResponse(400, 'No valid fields provided for update');
-
-    // Build dynamic UPDATE query for Neon
-    const setClause = fields.map((f, i) => `${f} = $${i + 1}`).join(', ');
-    const query = `UPDATE bookmarks SET ${setClause} WHERE id = $${fields.length + 1} AND user_id = $${fields.length + 2} RETURNING id`;
-    const values = [...Object.values(dbUpdates), id, user.id];
+    // We process each valid update field separately to maintain safety with Neon's template literal syntax
+    // This is more robust for serverless environments than manual dynamic query building
     
-    // Using (sql as any) to handle parameterized query string
-    const result = await (sql as any)(query, values);
-
-    if (result.length === 0) {
-      return errorResponse(404, 'Bookmark not found or unauthorized');
+    if (updates.title !== undefined) {
+      const res = await sql`UPDATE bookmarks SET title = ${updates.title} WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
+      if (res.length > 0) updatedId = res[0].id;
+    }
+    if (updates.description !== undefined) {
+      const res = await sql`UPDATE bookmarks SET description = ${updates.description} WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
+      if (res.length > 0) updatedId = res[0].id;
+    }
+    if (updates.url !== undefined) {
+      const res = await sql`UPDATE bookmarks SET url = ${updates.url} WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
+      if (res.length > 0) updatedId = res[0].id;
+    }
+    if (updates.folder_id !== undefined) {
+      // Allow moving to null (Unsorted)
+      const res = await sql`UPDATE bookmarks SET folder_id = ${updates.folder_id} WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
+      if (res.length > 0) updatedId = res[0].id;
+    }
+    if (updates.isStarred !== undefined) {
+      const res = await sql`UPDATE bookmarks SET is_starred = ${updates.isStarred} WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
+      if (res.length > 0) updatedId = res[0].id;
+    }
+    if (updates.isArchived !== undefined) {
+      const res = await sql`UPDATE bookmarks SET is_archived = ${updates.isArchived} WHERE id = ${id} AND user_id = ${user.id} RETURNING id`;
+      if (res.length > 0) updatedId = res[0].id;
     }
 
-    return jsonResponse(200, { success: true });
+    if (!updatedId) {
+      return errorResponse(404, 'Bookmark not found, unauthorized, or no valid updates provided');
+    }
+
+    return jsonResponse(200, { success: true, id: updatedId });
   } catch (error) {
     console.error('updateBookmark error:', error);
     return errorResponse(500, 'Internal Server Error');
