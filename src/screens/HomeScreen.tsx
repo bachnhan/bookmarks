@@ -11,6 +11,7 @@ interface HomeScreenProps {
   isArchived: boolean;
   folders: Folder[];
   onRefreshFolders: () => void;
+  refreshTrigger?: number;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ 
@@ -19,7 +20,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
   folderId,
   isArchived,
   folders,
-  onRefreshFolders
+  onRefreshFolders,
+  refreshTrigger = 0
 }) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,7 +30,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
 
   useEffect(() => {
     loadBookmarks();
-  }, [folderId, isArchived]);
+  }, [folderId, isArchived, refreshTrigger]);
 
   const loadBookmarks = async () => {
     try {

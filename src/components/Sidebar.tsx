@@ -170,8 +170,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
     data: { type: 'folder', folder: { id: null, name: 'Unsorted' } }
   });
 
-  const { setNodeRef: setRootDropRef, isOver: isOverRoot } = useDroppable({
-    id: 'root',
+  const { setNodeRef: setRootSidebarDropRef, isOver: isOverRootSidebar } = useDroppable({
+    id: 'root-sidebar',
     data: { type: 'folder', folder: { id: null, name: 'Root' } }
   });
 
@@ -351,10 +351,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="text-[14px]">Archived</span>
           </div>
 
-          <div 
-            ref={setRootDropRef}
-            className={`pt-8 pb-3 px-3 flex items-center justify-between group/header rounded-xl transition-all ${isOverRoot ? 'bg-blue-100/50 dark:bg-blue-900/40 ring-4 ring-blue-600 shadow-xl scale-[1.02] z-20' : ''}`}
-          >
+          <div className="pt-8 pb-3 px-3 flex items-center justify-between group/header rounded-xl transition-all">
             <h3 className="text-[10px] font-black text-blue-600/40 uppercase tracking-[0.2em]">Folders</h3>
             <button 
               onClick={() => setIsAddingFolder(true)}
@@ -383,22 +380,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
           
-          <div className="space-y-0.5">
-            {renderFolderItems()}
-            
+          <div className="relative flex-1 flex flex-col min-h-0">
             <div 
-              ref={setRootBottomDropRef}
+              ref={setRootSidebarDropRef}
               className={`
-                mt-4 p-4 border-2 border-dashed rounded-2xl flex items-center justify-center gap-2 transition-all group
-                ${isOverRootBottom 
-                  ? 'border-blue-600 bg-blue-100/50 dark:bg-blue-900/40 text-blue-600 shadow-xl scale-[1.05] ring-4 ring-blue-600/20 z-20' 
-                  : 'border-slate-100 dark:border-slate-800 text-slate-300 dark:text-slate-700 hover:border-blue-200'
+                absolute left-0 top-0 bottom-0 w-6 -ml-1 rounded-r-xl transition-all z-10 flex items-center justify-center
+                ${isOverRootSidebar 
+                  ? 'bg-blue-600/20 ring-4 ring-blue-600/30' 
+                  : 'bg-slate-50/50 dark:bg-slate-800/30 hover:bg-blue-50/50 border-r border-slate-100 dark:border-slate-800'
                 }
               `}
+              title="Drag here to move to Root"
             >
-              <Loader2 size={16} className={isOverRootBottom ? 'animate-spin' : 'hidden'} />
-              <FolderIcon size={16} className={!isOverRootBottom ? '' : 'hidden'} />
-              <span className="text-[11px] font-black uppercase tracking-widest">Move to Root</span>
+              <div className={`transform -rotate-90 whitespace-nowrap text-[8px] font-black uppercase tracking-[0.3em] transition-opacity ${isOverRootSidebar ? 'text-blue-600 opacity-100' : 'text-slate-300 dark:text-slate-700 opacity-0 group-hover:opacity-100'}`}>
+                Move to Root
+              </div>
+            </div>
+            
+            <div className="pl-7 space-y-0.5 overflow-y-auto custom-scrollbar">
+              {renderFolderItems()}
             </div>
           </div>
         </div>

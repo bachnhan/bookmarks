@@ -60,6 +60,9 @@ export default function App() {
     setCurrentView('home');
   };
 
+  const [refreshBookmarksTrigger, setRefreshBookmarksTrigger] = useState(0);
+  const handleRefreshBookmarks = () => setRefreshBookmarksTrigger(prev => prev + 1);
+
   const renderContent = () => {
     switch (currentView) {
       case 'home':
@@ -74,6 +77,7 @@ export default function App() {
               setCurrentView('add');
             }}
             onRefreshFolders={fetchFolders}
+            refreshTrigger={refreshBookmarksTrigger}
           />
         );
       case 'add':
@@ -119,6 +123,7 @@ export default function App() {
       folders={folders}
       onFoldersChange={setFolders}
       onRefreshFolders={fetchFolders}
+      onRefreshBookmarks={handleRefreshBookmarks}
     >
       <AnimatePresence mode="wait">
         <motion.div
