@@ -28,13 +28,14 @@ interface BookmarkCardProps {
 const CardActions: React.FC<{
   bookmark: Bookmark;
   folders: Folder[];
+  showMoveMenu: boolean;
+  setShowMoveMenu: (show: boolean) => void;
   onEdit?: (e: React.MouseEvent) => void;
   onDelete?: (e: React.MouseEvent) => void;
   onToggleStar?: (e: React.MouseEvent) => void;
   onArchive?: (e: React.MouseEvent) => void;
   onMove?: (folderId: string | null) => void;
-}> = ({ bookmark, folders, onEdit, onDelete, onToggleStar, onArchive, onMove }) => {
-  const [showMoveMenu, setShowMoveMenu] = useState(false);
+}> = ({ bookmark, folders, showMoveMenu, setShowMoveMenu, onEdit, onDelete, onToggleStar, onArchive, onMove }) => {
   const isStarred = bookmark.isStarred;
   const isArchived = bookmark.isArchived;
 
@@ -138,6 +139,8 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
     }
   });
 
+  const [showMoveMenu, setShowMoveMenu] = useState(false);
+
   const style = transform ? {
     transform: CSS.Translate.toString(transform),
   } : undefined;
@@ -166,11 +169,16 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
       <CardActions 
         bookmark={bookmark} 
         folders={folders}
+        showMoveMenu={showMoveMenu}
+        setShowMoveMenu={setShowMoveMenu}
         onEdit={onEdit} 
         onDelete={onDelete} 
         onToggleStar={onToggleStar} 
         onArchive={onArchive}
-        onMove={onMove}
+        onMove={(folderId) => {
+          if (onMove) onMove(folderId);
+          setShowMoveMenu(false);
+        }}
       />
     </div>
   );
@@ -180,10 +188,10 @@ export const BookmarkCard: React.FC<BookmarkCardProps> = ({
       ref={setNodeRef}
       style={style}
       onClick={onClick}
-      className={`bg-white dark:bg-slate-900 rounded-2xl overflow-hidden group active:scale-[0.98] transition-all duration-300 cursor-pointer border border-slate-200/60 dark:border-slate-800 hover:shadow-2xl hover:shadow-blue-500/5 hover:border-blue-500/20 flex flex-col h-full ${isDragging ? 'z-50 shadow-2xl scale-105 opacity-50 ring-2 ring-blue-500/50' : ''}`}
+      className={`bg-white dark:bg-slate-900 rounded-2xl group active:scale-[0.98] transition-all duration-300 cursor-pointer border border-slate-200/60 dark:border-slate-800 hover:shadow-2xl hover:shadow-blue-500/5 hover:border-blue-500/20 flex flex-col h-full relative ${showMoveMenu ? 'z-40 shadow-2xl' : 'z-0'} ${isDragging ? 'z-50 shadow-2xl scale-105 opacity-50 ring-2 ring-blue-500/50' : ''}`}
     >
       {bookmark.imageUrl && (
-        <div className="h-40 bg-slate-100 dark:bg-slate-800 overflow-hidden relative">
+        <div className="h-40 bg-slate-100 dark:bg-slate-800 overflow-hidden relative rounded-t-2xl">
           <img src={bookmark.imageUrl} alt="Preview" className="w-full h-full object-cover opacity-90 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500" />
           {bookmark.isStarred && (
             <div className="absolute top-3 left-3 bg-amber-400 text-white p-1 rounded-md shadow-lg">
