@@ -11,7 +11,7 @@ import {
   defaultDropAnimationSideEffects
 } from '@dnd-kit/core';
 import { bookmarkService } from '../services/bookmarkService';
-import { Bookmark } from '../types';
+import { Bookmark, Folder } from '../types';
 
 interface MainLayoutProps {
   children: ReactNode;
@@ -19,7 +19,10 @@ interface MainLayoutProps {
   onSelectArchived: () => void;
   activeFolderId: string | null;
   isArchivedActive: boolean;
-  onRefresh?: () => void;
+  folders: Folder[];
+  onFoldersChange: (newFolders: Folder[]) => void;
+  onRefreshFolders?: () => void;
+  onRefreshBookmarks?: () => void;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({ 
@@ -28,7 +31,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onSelectArchived,
   activeFolderId,
   isArchivedActive,
-  onRefresh
+  folders,
+  onFoldersChange,
+  onRefreshFolders,
+  onRefreshBookmarks
 }) => {
   const [activeBookmark, setActiveBookmark] = useState<Bookmark | null>(null);
 
@@ -53,7 +59,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
     if (!over) return;
 
-    // Handle Bookmark -> Folder Drop
+    // 1. Handle Bookmark -> Folder Drop
     if (active.data.current?.type === 'bookmark' && over.data.current?.type === 'folder') {
       const bookmarkId = active.id as string;
       const folderId = over.id as string; // 'null' for unsorted
@@ -62,13 +68,60 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
         await bookmarkService.updateBookmark(bookmarkId, { 
           folder_id: folderId === 'null' ? null : folderId 
         });
-        if (onRefresh) onRefresh();
+        if (onRefreshBookmarks) onRefreshBookmarks();
       } catch (err) {
         console.error('Failed to move bookmark via DND:', err);
       }
     }
     
-    // NOTE: Folder reordering will be handled here as well in the next step
+    // 2. Handle Folder -> Folder drop (Reordering or Nesting)
+    if (active.data.current?.type === 'folder') {
+      const activeId = active.id as string;
+      const overId = over.id as string;
+      
+      if (activeId === overId) return;
+
+      const activeFolder = folders.find(f => f.id === activeId);
+      const overFolder = overId === 'null' ? { id: null, name: 'Root' } : folders.find(f => f.id === overId);
+
+      if (!activeFolder) return;
+
+      // Case A: Moving a folder inside another (Nesting)
+      // Check if dropped ON top of another folder but NOT on its own child (prevent infinite move)
+      const isDroppingOnDifferentFolder = over.data.current?.type === 'folder';
+      
+      // For reordering (move before/after), we usually use SortableContext.
+      // But if user drops specifically ON another folder item:
+      if (isDroppingOnDifferentFolder) {
+        try {
+          // Verify it's not nesting into itself or its own sub-tree
+          const isDescendant = (parentId: string | null, targetId: string): boolean => {
+             const children = folders.filter(f => f.parent_id === parentId);
+             for (const child of children) {
+               if (child.id === targetId) return true;
+               if (isDescendant(child.id, targetId)) return true;
+             }
+             return false;
+          };
+
+          if (overId !== null && isDescendant(activeId, overId)) {
+            console.warn('Cannot nest a folder inside one of its own sub-folders');
+            return;
+          }
+
+          await bookmarkService.updateFolder(activeId, { 
+            parent_id: overId === 'null' ? null : (overId as string) 
+          });
+          if (onRefreshFolders) onRefreshFolders();
+        } catch (err) {
+          console.error('Failed to nest folder via DND:', err);
+        }
+      }
+      
+      // Case B: Reordering if they have the same parent (handled by sort_order updates)
+      // Actually, if we're using SortableContext, we might need a separate updateFolderOrder call.
+      // For now, nesting is the priority fix.
+    }
   };
 
   return (
@@ -83,6 +136,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
           onSelectArchived={onSelectArchived}
           activeFolderId={activeFolderId}
           isArchivedActive={isArchivedActive}
+          folders={folders}
+          onFoldersChange={onFoldersChange}
+          onRefreshFolders={onRefreshFolders}
         />
         <main className="flex-1 overflow-y-auto custom-scrollbar relative">
           {children}
@@ -108,3 +164,4 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     </DndContext>
   );
 };
+

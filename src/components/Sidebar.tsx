@@ -29,6 +29,7 @@ interface SidebarProps {
   isArchivedActive: boolean;
   folders: Folder[];
   onFoldersChange: (newFolders: Folder[]) => void;
+  onRefreshFolders?: () => void;
 }
 
 interface SortableFolderItemProps {
@@ -40,10 +41,11 @@ interface SortableFolderItemProps {
   onSelect: (id: string) => void;
   onToggle: (e: React.MouseEvent, id: string) => void;
   onDelete: (e: React.MouseEvent, id: string) => void;
+  onAddSubFolder: (id: string) => void;
 }
 
 const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
-  folder, isActive, isExpanded, hasChildren, level, onSelect, onToggle, onDelete
+  folder, isActive, isExpanded, hasChildren, level, onSelect, onToggle, onDelete, onAddSubFolder
 }) => {
   const {
     attributes,
@@ -114,6 +116,12 @@ const SortableFolderItem: React.FC<SortableFolderItemProps> = ({
       
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button 
+          onClick={(e) => { e.stopPropagation(); onAddSubFolder(folder.id); }}
+          className={`p-1 rounded-md transition-colors pointer-events-auto ${isActive ? 'hover:bg-blue-500 text-blue-100' : 'hover:bg-blue-50 text-blue-400'}`}
+        >
+          <FolderPlus size={14} />
+        </button>
+        <button 
           onClick={(e) => onDelete(e, folder.id)}
           className={`p-1 rounded-md transition-colors pointer-events-auto ${isActive ? 'hover:bg-blue-500 text-blue-100' : 'hover:bg-red-50 text-red-400'}`}
         >
@@ -132,11 +140,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectArchived,
   activeFolderId,
   isArchivedActive,
-  folders,
-  onFoldersChange
+  folders = [],
+  onFoldersChange,
+  onRefreshFolders
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [isOpen, setIsOpen] = useState(true);
+  const [addingToParent, setAddingToParent] = useState<string | null>(null);
   const [isAddingFolder, setIsAddingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
 
@@ -156,13 +166,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setExpandedFolders(newSet);
   };
 
-  const handleAddFolder = async () => {
+  const handleAddFolder = async (parentId: string | null = null) => {
     if (!newFolderName.trim()) return;
     try {
-      await bookmarkService.addFolder(newFolderName);
+      await bookmarkService.addFolder(newFolderName, parentId || undefined);
       setNewFolderName('');
       setIsAddingFolder(false);
-      // Parent will refresh folders via subscription or refetch
+      setAddingToParent(null);
+      if (onRefreshFolders) onRefreshFolders();
     } catch (err) {
       console.error('Failed to add folder:', err);
     }
@@ -174,6 +185,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     try {
       await bookmarkService.deleteFolder(id);
       if (activeFolderId === id) onSelectFolder(null);
+      if (onRefreshFolders) onRefreshFolders();
     } catch (err) {
       console.error('Failed to delete folder:', err);
     }
@@ -201,7 +213,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   onSelect={onSelectFolder}
                   onToggle={toggleFolder}
                   onDelete={handleDeleteFolder}
+                  onAddSubFolder={(id) => { setAddingToParent(id); setIsAddingFolder(true); }}
                 />
+                {addingToParent === folder.id && (
+                  <div className="px-3 mb-2 mt-1" style={{ marginLeft: `${(level + 1) * 12 + 12}px` }}>
+                    <input
+                      autoFocus
+                      className="w-full bg-white dark:bg-slate-800 border-2 border-blue-500 rounded-xl px-3 py-1.5 text-sm font-bold outline-none"
+                      placeholder="Subfolder name..."
+                      value={newFolderName}
+                      onChange={(e) => setNewFolderName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleAddFolder(folder.id);
+                        if (e.key === 'Escape') { setIsAddingFolder(false); setAddingToParent(null); }
+                      }}
+                      onBlur={() => {
+                        if (!newFolderName) { setIsAddingFolder(false); setAddingToParent(null); }
+                      }}
+                    />
+                  </div>
+                )}
                 {hasChildren && isExpanded && renderFolderItems(folder.id, level + 1)}
               </React.Fragment>
             );

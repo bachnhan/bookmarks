@@ -1,12 +1,12 @@
 import { Bookmark, Folder } from '../types';
-import { supabase } from '../lib/supabase';
+import { authClient } from '../lib/auth';
 
 class BookmarkService {
-  private async getAuthToken(): Promise<string> {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) throw new Error('User not authenticated');
-    return session.access_token;
+  private async getAuthToken(): Promise<string | undefined> {
+    const { data } = await authClient.getSession();
+    return data?.session?.token;
   }
+
 
   async getFolders(): Promise<Folder[]> {
     const token = await this.getAuthToken();
@@ -110,6 +110,19 @@ class BookmarkService {
       body: JSON.stringify({ id }),
     });
     if (!response.ok) throw new Error('Failed to delete folder');
+  }
+
+  async updateFolder(id: string, updates: Partial<Folder>): Promise<void> {
+    const token = await this.getAuthToken();
+    const response = await fetch('/api/updateFolder', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ id, updates }),
+    });
+    if (!response.ok) throw new Error('Failed to update folder');
   }
 
   async updateFolderOrder(folderOrders: { id: string; sortOrder: number }[]): Promise<void> {
