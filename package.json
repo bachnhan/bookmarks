@@ -8,7 +8,7 @@
     "dev": "netlify dev",
     "dev:vite": "pnpm vite --port=5173 --host=0.0.0.0",
     "build": "pnpm vite build",
-    "build:prod": "pnpm run build && echo '/* /index.html 200' > dist/_redirects",
+    "build:prod": "pnpm run build && echo '/api/* /.netlify/functions/:splat 200\n/* /index.html 200' > dist/_redirects",
     "preview": "pnpm vite preview",
     "clean": "rm -rf dist",
     "lint": "pnpm tsc --noEmit",
