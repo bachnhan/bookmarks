@@ -1,126 +1,195 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Plus, Loader2 } from 'lucide-react';
-import { TopBar } from '../components/TopBar';
+import { Search, Plus, Loader2, Star, Folder as FolderIcon, LayoutList, Archive } from 'lucide-react';
 import { BookmarkCard } from '../components/BookmarkCard';
-import { supabase } from '../lib/supabase';
-import { Bookmark } from '../types';
+import { bookmarkService } from '../services/bookmarkService';
+import { Bookmark, Folder } from '../types';
 
 interface HomeScreenProps {
   onAddClick: () => void;
+  onEditClick: (bookmark: Bookmark) => void;
+  folderId: string | null;
+  isArchived: boolean;
 }
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ onAddClick }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ 
+  onAddClick, 
+  onEditClick,
+  folderId,
+  isArchived
+}) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchBookmarks();
+    loadFolders();
   }, []);
 
-  const fetchBookmarks = async () => {
+  useEffect(() => {
+    loadBookmarks();
+  }, [folderId, isArchived]);
+
+  const loadFolders = async () => {
+    try {
+      const fData = await bookmarkService.getFolders();
+      setFolders(fData);
+    } catch (err) {
+      console.error('Error loading folders:', err);
+    }
+  };
+
+  const loadBookmarks = async () => {
     try {
       setLoading(true);
-      const { data, error: fetchError } = await supabase
-        .from('bookmarks')
-        .select('*')
-        .order('addedat', { ascending: false });
-
-      if (fetchError) throw fetchError;
-
-      // Map DB fields to application Bookmark type if they differ
-      const mappedBookmarks: Bookmark[] = (data || []).map((b: any) => ({
-        id: b.id,
-        title: b.title,
-        description: b.description,
-        url: b.url,
-        source: b.source || new URL(b.url).hostname,
-        faviconUrl: b.faviconurl,
-        imageUrl: b.imageurl,
-        tags: b.tags || [],
-        addedAt: b.addedat,
-        type: b.type || 'medium'
-      }));
-
-      setBookmarks(mappedBookmarks);
+      const bData = await bookmarkService.getBookmarks(folderId || undefined, isArchived);
+      setBookmarks(bData);
     } catch (err: any) {
-      console.error('Error fetching bookmarks:', err);
-      setError(err.message || 'Failed to fetch bookmarks');
+      console.error('Error loading bookmarks:', err);
+      setError(err.message || 'Failed to sync with Neon');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleDeleteBookmark = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this bookmark?')) return;
+    try {
+      await bookmarkService.deleteBookmark(id);
+      setBookmarks(prev => prev.filter(b => b.id !== id));
+    } catch (err) {
+      console.error('Error deleting bookmark:', err);
+    }
+  };
+
+  const handleToggleStar = async (bookmarkId: string, currentStarred: boolean) => {
+    try {
+      const nextState = !currentStarred;
+      await bookmarkService.toggleStar(bookmarkId, nextState);
+      setBookmarks(prev => prev.map(b => b.id === bookmarkId ? { ...b, isStarred: nextState } : b));
+    } catch (err) {
+      console.error('Error toggling star:', err);
+    }
+  };
+
+  const handleArchive = async (bookmarkId: string, currentArchived: boolean) => {
+    try {
+      const nextState = !currentArchived;
+      await bookmarkService.updateBookmark(bookmarkId, { isArchived: nextState });
+      setBookmarks(prev => prev.filter(b => b.id !== bookmarkId));
+    } catch (err) {
+      console.error('Error archiving bookmark:', err);
+    }
+  };
+
+  const handleMove = async (bookmarkId: string, newFolderId: string | null) => {
+    try {
+      await bookmarkService.updateBookmark(bookmarkId, { folder_id: newFolderId });
+      if (folderId !== newFolderId) {
+        setBookmarks(prev => prev.filter(b => b.id !== bookmarkId));
+      }
+    } catch (err) {
+      console.error('Error moving bookmark:', err);
+    }
+  };
+
+  const filteredBookmarks = bookmarks.filter(b => {
+    const q = searchQuery.toLowerCase();
+    return (
+      b.title.toLowerCase().includes(q) ||
+      b.description?.toLowerCase().includes(q) ||
+      b.url.toLowerCase().includes(q)
+    );
+  });
+
+  const getActiveTitle = () => {
+    if (isArchived) return 'Archived';
+    if (folderId === '__unsorted__') return 'Unsorted';
+    if (folderId) return folders.find(f => f.id === folderId)?.name || 'Folder';
+    return 'All Library';
+  };
+
   return (
-    <div className="min-h-screen bg-[#f9f9f9] dark:bg-slate-950 pb-24">
-      <TopBar title="The Archivist" onAddClick={onAddClick} />
-      
-      <main className="px-6 pt-6 max-w-2xl mx-auto">
-        {/* Search Section */}
-        <section className="mb-8">
-          <div className="bg-slate-100 dark:bg-slate-900 rounded-sm flex items-center px-4 py-3 group focus-within:bg-white dark:focus-within:bg-slate-800 focus-within:ring-1 focus-within:ring-[#091426]/20 transition-all">
-            <Search size={20} className="text-slate-400 mr-3" />
+    <div className="p-8 max-w-7xl mx-auto min-h-full bg-slate-50/50">
+      {/* Header Section */}
+      <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div>
+          <div className="flex items-center gap-2 text-blue-600/60 mb-1">
+            {isArchived ? <Archive size={14} /> : <LayoutList size={14} />}
+            <span className="text-[10px] font-black tracking-widest uppercase">
+              {isArchived ? 'Retention' : 'Collection'}
+            </span>
+          </div>
+          <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+            {getActiveTitle()}
+          </h1>
+        </div>
+        
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative group flex-1 md:flex-none">
+            <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
             <input 
-              className="bg-transparent border-none focus:ring-0 w-full text-[#091426] dark:text-white placeholder:text-slate-300 font-body" 
-              placeholder="Search your knowledge..." 
-              type="text"
+              type="text" 
+              placeholder="Quick search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-11 pr-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-blue-500/10 w-full md:w-72 transition-all shadow-sm"
             />
           </div>
-        </section>
-
-        {/* Minimalist Filters */}
-        <section className="mb-10 flex gap-6 overflow-x-auto no-scrollbar pb-2">
-          <button className="text-[#091426] dark:text-white font-semibold text-sm tracking-tight border-b-2 border-[#091426] dark:border-white pb-1 shrink-0">Recent</button>
-          <button className="text-slate-400 font-medium text-sm tracking-tight hover:text-[#091426] dark:hover:text-white transition-colors shrink-0">Folders</button>
-          <button className="text-slate-400 font-medium text-sm tracking-tight hover:text-[#091426] dark:hover:text-white transition-colors shrink-0">Tags</button>
-          <button className="text-slate-400 font-medium text-sm tracking-tight hover:text-[#091426] dark:hover:text-white transition-colors shrink-0">Favorites</button>
-        </section>
-
-        {/* Bento/Editorial Card List */}
-        {loading ? (
-          <div className="flex flex-col items-center justify-center pt-20 text-slate-400">
-            <Loader2 className="animate-spin mb-4" />
-            <p className="text-sm">Retrieving your knowledge...</p>
-          </div>
-        ) : error ? (
-          <div className="bg-red-50 text-red-600 p-8 rounded-2xl text-center">
-            <p className="font-medium mb-4">{error}</p>
-            <button 
-              onClick={fetchBookmarks}
-              className="bg-white px-6 py-2 rounded-full shadow-sm hover:shadow-md transition-shadow text-sm"
-            >
-              Try again
-            </button>
-          </div>
-        ) : bookmarks.length === 0 ? (
-          <div className="flex flex-col items-center justify-center pt-20 text-center">
-            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-900 rounded-2xl flex items-center justify-center mb-6 text-slate-300">
-              <Plus size={32} />
-            </div>
-            <p className="text-slate-500 mb-6">Your archive is empty</p>
+          {!isArchived && (
             <button 
               onClick={onAddClick}
-              className="bg-[#091426] dark:bg-white text-white dark:text-[#091426] px-8 py-3 rounded-md text-sm font-bold tracking-widest uppercase transition-all hover:opacity-80 active:scale-95"
+              className="p-3.5 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 shadow-xl shadow-blue-100 dark:shadow-none transition-all duration-300 hover:-translate-y-1 active:scale-95 shrink-0"
             >
-              Add First Bookmark
+              <Plus size={22} strokeWidth={3} />
             </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {bookmarks.map(bookmark => (
-              <BookmarkCard key={bookmark.id} bookmark={bookmark} />
-            ))}
-          </div>
-        )}
-      </main>
+          )}
+        </div>
+      </header>
 
-      {/* FAB */}
-      <button 
-        onClick={onAddClick}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-gradient-to-br from-[#091426] to-[#1e293b] text-white rounded-full shadow-[0_4px_32px_rgba(9,20,38,0.2)] flex items-center justify-center active:scale-90 transition-transform duration-150 z-50"
-      >
-        <Plus size={24} />
-      </button>
+      {/* Main Content Area */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center pt-32 text-slate-400">
+          <Loader2 className="animate-spin mb-4" />
+          <p className="text-sm font-medium">Curating your knowledge...</p>
+        </div>
+      ) : error ? (
+        <div className="bg-red-50 dark:bg-red-900/10 text-red-600 p-8 rounded-2xl text-center border border-red-100 dark:border-red-900/20">
+          <p className="font-medium mb-4">{error}</p>
+          <button 
+            onClick={loadBookmarks}
+            className="bg-white dark:bg-slate-900 px-6 py-2 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 text-sm font-bold"
+          >
+            Try again
+          </button>
+        </div>
+      ) : filteredBookmarks.length === 0 ? (
+        <div className="flex flex-col items-center justify-center pt-32 text-center">
+          <div className="w-24 h-24 bg-white dark:bg-slate-900 rounded-[2.5rem] flex items-center justify-center mb-8 shadow-2xl shadow-blue-50 dark:shadow-none text-blue-100">
+            <FolderIcon size={48} strokeWidth={1.5} className="text-blue-500/20" />
+          </div>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-3">No match for "{searchQuery}"</h2>
+          <p className="text-slate-500 dark:text-slate-400 mb-10 max-w-xs leading-relaxed">
+            Try a different search term or explore another folder.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredBookmarks.map(bookmark => (
+            <BookmarkCard 
+              key={bookmark.id} 
+              bookmark={bookmark} 
+              folders={folders}
+              onEdit={() => onEditClick(bookmark)}
+              onDelete={() => handleDeleteBookmark(bookmark.id)}
+              onToggleStar={() => handleToggleStar(bookmark.id, !!bookmark.isStarred)}
+              onArchive={() => handleArchive(bookmark.id, !!bookmark.isArchived)}
+              onMove={(newFolderId) => handleMove(bookmark.id, newFolderId)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

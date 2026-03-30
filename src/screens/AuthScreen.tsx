@@ -38,25 +38,25 @@ export function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9] dark:bg-slate-950 flex flex-col items-center justify-center p-6 selection:bg-[#091426]/10">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 selection:bg-blue-100">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
         className="w-full max-w-sm"
       >
-        <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 rounded-[1.25rem] bg-[#091426] dark:bg-white flex items-center justify-center shadow-xl shadow-slate-200 dark:shadow-slate-900/50">
-            <Lock className="w-8 h-8 text-white dark:text-[#091426]" />
+        <div className="flex justify-center mb-10">
+          <div className="w-20 h-20 rounded-[2rem] bg-blue-600 dark:bg-white flex items-center justify-center shadow-2xl shadow-blue-200 dark:shadow-none">
+            <Lock className="w-10 h-10 text-white dark:text-blue-600" />
           </div>
         </div>
 
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold tracking-tight text-[#091426] dark:text-white mb-2">
-            {isSignUp ? 'Create an Account' : 'Welcome Back'}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white mb-3">
+            {isSignUp ? 'Create Account' : 'Welcome Back'}
           </h1>
-          <p className="text-slate-500 dark:text-slate-400">
-            {isSignUp ? 'Sign up to manage your private bookmarks' : 'Sign in to access your private bookmarks'}
+          <p className="text-slate-500 dark:text-slate-400 font-medium">
+            {isSignUp ? 'Join The Archivist today' : 'Sign in to your private vault'}
           </p>
         </div>
 
@@ -74,7 +74,7 @@ export function AuthScreen() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#091426] dark:focus:ring-white transition-all text-[15px]"
+                  className="block w-full pl-11 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white transition-all text-[15px] outline-none"
                   placeholder="you@example.com"
                   required
                 />
@@ -93,7 +93,7 @@ export function AuthScreen() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border-none rounded-2xl text-slate-900 dark:text-white focus:ring-2 focus:ring-[#091426] dark:focus:ring-white transition-all text-[15px]"
+                  className="block w-full pl-11 pr-4 py-4 bg-slate-50 dark:bg-slate-800 border-2 border-transparent rounded-2xl text-slate-900 dark:text-white focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 focus:bg-white transition-all text-[15px] outline-none"
                   placeholder="••••••••"
                   required
                 />
@@ -117,7 +117,7 @@ export function AuthScreen() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-[1.25rem] shadow-sm text-[15px] font-medium text-white bg-[#091426] hover:bg-slate-800 dark:bg-white dark:text-[#091426] dark:hover:bg-slate-100 dark:hover:text-black focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#091426] dark:focus:ring-white dark:focus:ring-offset-slate-900 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+              className="w-full flex justify-center py-4 px-4 border border-transparent rounded-2xl shadow-xl shadow-blue-100 dark:shadow-none text-[15px] font-black text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all hover:-translate-y-0.5 active:scale-95 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

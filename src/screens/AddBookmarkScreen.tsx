@@ -1,43 +1,68 @@
-import React, { useState } from 'react';
-import { Folder, X, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Folder as FolderIcon, X, Loader2, ChevronDown } from 'lucide-react';
 import { TopBar } from '../components/TopBar';
-import { supabase } from '../lib/supabase';
+import { bookmarkService } from '../services/bookmarkService';
+import { Bookmark, Folder } from '../types';
 
 interface AddBookmarkScreenProps {
   onClose: () => void;
+  initialBookmark?: Bookmark | null; // Existing bookmark to edit
 }
 
-export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ onClose }) => {
-  const [url, setUrl] = useState('');
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ onClose, initialBookmark }) => {
+  const [url, setUrl] = useState(initialBookmark?.url || '');
+  const [title, setTitle] = useState(initialBookmark?.title || '');
+  const [description, setDescription] = useState(initialBookmark?.description || '');
+  const [folderId, setFolderId] = useState(initialBookmark?.folder_id || '');
+  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchFolders();
+  }, []);
+
+  const fetchFolders = async () => {
+    try {
+      const data = await bookmarkService.getFolders();
+      setFolders(data);
+    } catch (err) {
+      console.error('Failed to load folders:', err);
+    }
+  };
 
   const handleSave = async () => {
     if (!url) return;
     setLoading(true);
     setError(null);
-
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        setError('You must be logged in to add bookmarks');
-        setLoading(false);
-        return;
+      let source = 'Web';
+      try {
+        if (url.startsWith('http')) {
+          source = new URL(url).hostname.replace('www.', '');
+        }
+      } catch (e) {
+        // Fallback to Web if URL is invalid
       }
 
-      const { error: insertError } = await supabase.from('bookmarks').insert({
-        url,
-        title: title || url,
-        description,
-        user_id: user.id, // Associated with the authenticated user
-        type: 'link', // Default type
-        addedat: new Date().toISOString()
-      });
-
-      if (insertError) throw insertError;
+      if (initialBookmark) {
+        await bookmarkService.updateBookmark(initialBookmark.id, {
+          url,
+          title: title || url,
+          description,
+          folder_id: folderId || null
+        });
+      } else {
+        await bookmarkService.addBookmark({
+          url,
+          title: title || url,
+          description,
+          source,
+          tags: [],
+          folder_id: folderId || undefined,
+          type: 'medium'
+        });
+      }
       
       onClose();
     } catch (err: any) {
@@ -49,9 +74,9 @@ export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ onClose })
   };
 
   return (
-    <div className="min-h-screen bg-[#f9f9f9] dark:bg-slate-950 pb-24">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
       <TopBar 
-        title="Add Bookmark" 
+        title={initialBookmark ? "Edit Bookmark" : "Add Bookmark"} 
         variant="modal" 
         onClose={onClose} 
         onConfirm={handleSave}
@@ -60,35 +85,55 @@ export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ onClose })
       <main className="px-6 py-8 max-w-md mx-auto space-y-10">
         {/* URL Input Section */}
         <section className="space-y-3">
-          <label className="text-[10px] font-medium tracking-widest uppercase text-slate-400">Destination</label>
-          <div className="bg-slate-100 dark:bg-slate-900 rounded-sm group focus-within:bg-white dark:focus-within:bg-slate-800 transition-colors border border-transparent focus-within:border-[#091426]/20">
+          <label className="text-[10px] font-black tracking-[0.2em] uppercase text-blue-600/40 ml-1">Destination</label>
+          <div className="bg-white dark:bg-slate-900 rounded-2xl group focus-within:bg-white dark:focus-within:bg-slate-800 transition-all border border-slate-200/60 focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 shadow-sm">
             <textarea 
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="w-full bg-transparent border-none focus:ring-0 p-4 font-body text-[#091426] dark:text-white placeholder:text-slate-300 resize-none h-24" 
+              className="w-full bg-transparent border-none focus:ring-0 p-5 font-medium text-slate-900 dark:text-white placeholder:text-slate-300 resize-none h-28 outline-none" 
               placeholder="Paste your URL here..."
             />
+          </div>
+        </section>
+
+        {/* Folder Selection Section */}
+        <section className="space-y-3">
+          <label className="text-[10px] font-black tracking-[0.2em] uppercase text-blue-600/40 ml-1">Workspace / Folder</label>
+          <div className="relative">
+            <select 
+              value={folderId}
+              onChange={(e) => setFolderId(e.target.value)}
+              className="w-full appearance-none bg-white dark:bg-slate-900 border border-slate-200/60 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 p-5 rounded-2xl font-bold text-slate-900 dark:text-white transition-all shadow-sm outline-none"
+            >
+              <option value="">Unsorted / Inbox</option>
+              {folders.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-focus-within:text-blue-500">
+              <ChevronDown size={20} />
+            </div>
           </div>
         </section>
 
         {/* Meta Information Section */}
         <section className="space-y-6">
           <div className="space-y-3">
-            <label className="text-[10px] font-medium tracking-widest uppercase text-slate-400">Title (Optional)</label>
+            <label className="text-[10px] font-black tracking-[0.2em] uppercase text-blue-600/40 ml-1">Title (Optional)</label>
             <input 
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-900 border-none focus:ring-0 p-4 rounded-sm font-body text-[#091426] dark:text-white placeholder:text-slate-300 focus:bg-white dark:focus:bg-slate-800 transition-colors" 
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200/60 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 p-5 rounded-2xl font-bold text-slate-900 dark:text-white placeholder:text-slate-300 transition-all shadow-sm outline-none" 
               placeholder="E.g. The Future of Typography" 
               type="text"
             />
           </div>
           <div className="space-y-3">
-            <label className="text-[10px] font-medium tracking-widest uppercase text-slate-400">Description</label>
+            <label className="text-[10px] font-black tracking-[0.2em] uppercase text-blue-600/40 ml-1">Description</label>
             <textarea 
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full bg-slate-100 dark:bg-slate-900 border-none focus:ring-0 p-4 rounded-sm font-body text-[#091426] dark:text-white placeholder:text-slate-300 resize-none h-32 focus:bg-white dark:focus:bg-slate-800 transition-colors" 
+              className="w-full bg-white dark:bg-slate-900 border border-slate-200/60 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 p-5 rounded-2xl font-medium text-slate-900 dark:text-white placeholder:text-slate-300 resize-none h-36 transition-all shadow-sm outline-none" 
               placeholder="Add a personal note or summary..."
             />
           </div>
@@ -101,13 +146,13 @@ export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ onClose })
         )}
 
         {/* Save Action */}
-        <section className="pt-4">
+        <section className="pt-6">
           <button 
             onClick={handleSave}
             disabled={loading || !url}
-            className="w-full bg-gradient-to-br from-[#091426] to-[#1e293b] text-white py-5 rounded-md text-sm font-bold tracking-widest uppercase shadow-2xl shadow-[#091426]/10 active:scale-95 transition-transform duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            className="w-full bg-blue-600 text-white py-5 rounded-2xl text-sm font-black tracking-widest uppercase shadow-xl shadow-blue-100 hover:bg-blue-700 hover:-translate-y-1 active:scale-95 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
           >
-            {loading ? <Loader2 className="animate-spin" /> : 'Save to Archive'}
+            {loading ? <Loader2 className="animate-spin" /> : (initialBookmark ? 'Update Bookmark' : 'Save to Archive')}
           </button>
         </section>
       </main>

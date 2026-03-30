@@ -20,41 +20,39 @@ export const TopBar: React.FC<TopBarProps> = ({
 }) => {
   if (variant === 'modal') {
     return (
-      <header className="w-full sticky top-0 z-40 bg-[#f9f9f9] dark:bg-slate-950">
+      <header className="w-full sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/60 dark:bg-slate-950">
         <div className="flex items-center justify-between px-6 py-4 w-full">
-          <div className="flex items-center gap-3">
-            <button onClick={onClose} className="text-[#091426] dark:text-slate-100 hover:opacity-70 transition-opacity">
-              <X size={24} />
+          <div className="flex items-center gap-4">
+            <button onClick={onClose} className="text-slate-400 hover:text-blue-600 transition-colors">
+              <X size={22} />
             </button>
-            <h1 className="font-['Inter'] font-semibold tracking-tight text-lg text-[#091426] dark:text-slate-100">
+            <h1 className="font-black tracking-tight text-xl text-slate-900 dark:text-slate-100">
               {title}
             </h1>
           </div>
-          <button onClick={onConfirm} className="text-[#091426] dark:text-slate-100 hover:opacity-70 transition-opacity">
-            <Check size={24} />
+          <button onClick={onConfirm} className="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center hover:bg-blue-600 hover:text-white transition-all duration-300 active:scale-90">
+            <Check size={20} strokeWidth={3} />
           </button>
         </div>
-        <div className="bg-[#eeeeee] dark:bg-slate-900 h-px w-full" />
       </header>
     );
   }
 
   return (
-    <header className="w-full sticky top-0 z-40 bg-[#f9f9f9] dark:bg-slate-950">
+    <header className="w-full sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/60 dark:bg-slate-950">
       <div className="flex items-center justify-between px-6 py-4 w-full">
-        <div className="flex items-center gap-3">
-          <button onClick={onMenuClick} className="text-[#091426] dark:text-slate-100 hover:opacity-70 transition-opacity">
-            <Menu size={24} />
+        <div className="flex items-center gap-4">
+          <button onClick={onMenuClick} className="text-slate-400 hover:text-blue-600 transition-colors">
+            <Menu size={22} />
           </button>
-          <h1 className="text-xl font-bold text-[#091426] dark:text-slate-100 tracking-tighter">
+          <h1 className="text-xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
             {title}
           </h1>
         </div>
-        <button onClick={onAddClick} className="text-[#091426] dark:text-slate-100 hover:opacity-70 transition-opacity scale-95 duration-200">
-          <PlusCircle size={24} />
+        <button onClick={onAddClick} className="w-10 h-10 bg-blue-600 text-white rounded-xl flex items-center justify-center hover:bg-blue-700 shadow-lg shadow-blue-100 transition-all duration-300 active:scale-90">
+          <PlusCircle size={20} />
         </button>
       </div>
-      <div className="bg-[#eeeeee] dark:bg-slate-900 h-px w-full" />
     </header>
   );
 };

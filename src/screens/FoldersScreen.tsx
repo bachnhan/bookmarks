@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { TopBar } from '../components/TopBar';
 import { FolderCard } from '../components/FolderCard';
-import { supabase } from '../lib/supabase';
 import { Folder } from '../types';
 import { Loader2 } from 'lucide-react';
+import { bookmarkService } from '../services/bookmarkService';
 
 export const FoldersScreen: React.FC = () => {
   const [folders, setFolders] = useState<Folder[]>([]);
@@ -17,26 +17,11 @@ export const FoldersScreen: React.FC = () => {
   const fetchFolders = async () => {
     try {
       setLoading(true);
-      const { data, error: fetchError } = await supabase
-        .from('folders')
-        .select('*')
-        .order('name');
-
-      if (fetchError) throw fetchError;
-
-      const mappedFolders: Folder[] = (data || []).map((f: any) => ({
-        id: f.id,
-        name: f.name,
-        description: f.description,
-        itemCount: f.itemcount || 0,
-        iconName: f.iconname,
-        bgImageUrl: f.bgimageurl
-      }));
-
-      setFolders(mappedFolders);
+      const data = await bookmarkService.getFolders();
+      setFolders(data);
     } catch (err: any) {
       console.error('Error fetching folders:', err);
-      setError(err.message || 'Failed to fetch folders');
+      setError('Waiting for data to sync... (Try refreshing in a moment)');
     } finally {
       setLoading(false);
     }

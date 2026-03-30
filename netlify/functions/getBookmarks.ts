@@ -1,82 +1,84 @@
 import { neon } from '@neondatabase/serverless';
-import { createClient } from '@supabase/supabase-js';
-
-// Define CORS headers for cross-origin requests
-const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-};
+import { getAuthenticatedUser, jsonResponse, errorResponse, CORS_HEADERS } from './utils';
 
 /**
  * Netlify Function handler to retrieve bookmarks.
- * It verifies the user session via Supabase and returns only bookmarks belonging to that user.
  */
 export const handler = async (event) => {
-  // Handle Preflight OPTIONS request
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers: CORS_HEADERS };
   }
 
-  // Only allow GET requests
   if (event.httpMethod !== 'GET') {
-    return { 
-      statusCode: 405, 
-      headers: CORS_HEADERS, 
-      body: 'Method Not Allowed' 
-    };
+    return errorResponse(405, 'Method Not Allowed');
   }
 
   try {
-    // 1. Initialize Supabase client
-    const supabase = createClient(
-      process.env.VITE_SUPABASE_URL!,
-      process.env.VITE_SUPABASE_ANON_KEY!
-    );
-
-    // 2. Extract and verify JWT token from Authorization header
-    const authHeader = event.headers.authorization || event.headers.Authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return { 
-        statusCode: 401, 
-        headers: CORS_HEADERS, 
-        body: JSON.stringify({ error: 'Missing or invalid authorization header' }) 
-      };
-    }
-
-    const token = authHeader.split(' ')[1];
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
+    const { user, error: authError } = await getAuthenticatedUser(event);
     if (authError || !user) {
-      console.error('[Auth Error]', authError?.message);
-      return { 
-        statusCode: 401, 
-        headers: CORS_HEADERS, 
-        body: JSON.stringify({ error: 'Unauthorized session' }) 
-      };
+      return errorResponse(401, authError || 'Unauthorized');
     }
 
-    // 3. Initialize Neon DB client and fetch data
+    const folderId = event.queryStringParameters?.folderId;
+    const isArchived = event.queryStringParameters?.isArchived === 'true';
+    
     const sql = neon(process.env.DATABASE_URL!);
     
-    // Filter bookmarks strictly by the verified user_id
-    const bookmarks = await sql`
-      SELECT * FROM bookmarks 
-      WHERE user_id = ${user.id}
-      ORDER BY addedat DESC
-    `;
+    let bookmarks;
+    // Strict user_id check to ensure privacy
+    if (isArchived) {
+      bookmarks = await sql`
+        SELECT 
+          id, title, description, url, source, faviconurl as "faviconUrl", 
+          imageurl as "imageUrl", tags, addedat as "addedAt", type, 
+          folder_id, is_starred as "isStarred", is_archived as "isArchived"
+        FROM bookmarks 
+        WHERE user_id = ${user.id}
+          AND is_archived = TRUE
+        ORDER BY is_starred DESC, addedat DESC
+      `;
+    } else if (folderId === '__unsorted__') {
+      bookmarks = await sql`
+        SELECT 
+          id, title, description, url, source, faviconurl as "faviconUrl", 
+          imageurl as "imageUrl", tags, addedat as "addedAt", type, 
+          folder_id, is_starred as "isStarred", is_archived as "isArchived"
+        FROM bookmarks 
+        WHERE user_id = ${user.id}
+          AND folder_id IS NULL
+          AND is_archived = FALSE
+        ORDER BY is_starred DESC, addedat DESC
+      `;
+    } else if (folderId) {
+      bookmarks = await sql`
+        SELECT 
+          id, title, description, url, source, faviconurl as "faviconUrl", 
+          imageurl as "imageUrl", tags, addedat as "addedAt", type, 
+          folder_id, is_starred as "isStarred", is_archived as "isArchived"
+        FROM bookmarks 
+        WHERE user_id = ${user.id}
+          AND folder_id = ${folderId}
+          AND is_archived = FALSE
+        ORDER BY is_starred DESC, addedat DESC
+      `;
+    } else {
+      // Default view: All non-archived, stars first
+      bookmarks = await sql`
+        SELECT 
+          id, title, description, url, source, faviconurl as "faviconUrl", 
+          imageurl as "imageUrl", tags, addedat as "addedAt", type, 
+          folder_id, is_starred as "isStarred", is_archived as "isArchived"
+        FROM bookmarks 
+        WHERE user_id = ${user.id}
+          AND is_archived = FALSE
+        ORDER BY is_starred DESC, addedat DESC
+      `;
+    }
 
-    return {
-      statusCode: 200,
-      headers: CORS_HEADERS,
-      body: JSON.stringify(bookmarks),
-    };
+    return jsonResponse(200, bookmarks);
   } catch (error) {
-    console.error('[Server Error] Exception in getBookmarks:', error);
-    return {
-      statusCode: 500,
-      headers: CORS_HEADERS,
-      body: JSON.stringify({ error: 'Internal Server Error' }),
-    };
+    console.error('[Server Error] getBookmarks:', error);
+    return errorResponse(500, 'Internal Server Error');
   }
 };
+
