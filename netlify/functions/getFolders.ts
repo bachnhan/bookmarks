@@ -21,20 +21,20 @@ export const handler = async (event) => {
 
     const sql = neon(process.env.DATABASE_URL!);
     
-    // Fetch all folders for the user (including parent_id for hierarchy)
+    // Fetch all folders for the user with dynamic itemCount calculation
     const folders = await sql`
       SELECT 
-        id, 
-        name, 
-        description, 
-        itemcount as "itemCount", 
-        iconname as "iconName", 
-        bgimageurl as "bgImageUrl", 
-        parent_id,
-        sort_order as "sortOrder"
-      FROM folders 
-      WHERE user_id = ${user.id}
-      ORDER BY sort_order ASC, name ASC
+        f.id, 
+        f.name, 
+        f.description, 
+        (SELECT COUNT(*) FROM bookmarks b WHERE b.folder_id = f.id) as "itemCount", 
+        f.iconname as "iconName", 
+        f.bgimageurl as "bgImageUrl", 
+        f.parent_id,
+        f.sort_order as "sortOrder"
+      FROM folders f
+      WHERE f.user_id = ${user.id}
+      ORDER BY f.sort_order ASC, f.name ASC
     `;
 
     return jsonResponse(200, folders);
