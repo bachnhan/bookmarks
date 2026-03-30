@@ -33,9 +33,11 @@ export async function createTables() {
       iconname TEXT,
       bgimageurl TEXT,
       parent_id UUID REFERENCES folders(id) ON DELETE CASCADE,
+      sort_order INTEGER DEFAULT 0,
       user_id UUID, 
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
     );
+
   `;
 
   // 2. Create bookmarks table
@@ -53,9 +55,11 @@ export async function createTables() {
       addedat TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       type TEXT DEFAULT 'medium',
       is_starred BOOLEAN DEFAULT FALSE,
+      is_archived BOOLEAN DEFAULT FALSE,
       user_id UUID,
       folder_id UUID REFERENCES folders(id) ON DELETE SET NULL
     );
+
   `;
   
   console.log("Tables created successfully in Neon Database!");

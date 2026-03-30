@@ -9,36 +9,26 @@ interface HomeScreenProps {
   onEditClick: (bookmark: Bookmark) => void;
   folderId: string | null;
   isArchived: boolean;
+  folders: Folder[];
+  onRefreshFolders: () => void;
 }
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ 
   onAddClick, 
   onEditClick,
   folderId,
-  isArchived
+  isArchived,
+  folders,
+  onRefreshFolders
 }) => {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    loadFolders();
-  }, []);
-
-  useEffect(() => {
     loadBookmarks();
   }, [folderId, isArchived]);
-
-  const loadFolders = async () => {
-    try {
-      const fData = await bookmarkService.getFolders();
-      setFolders(fData);
-    } catch (err) {
-      console.error('Error loading folders:', err);
-    }
-  };
 
   const loadBookmarks = async () => {
     try {
@@ -58,6 +48,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
     try {
       await bookmarkService.deleteBookmark(id);
       setBookmarks(prev => prev.filter(b => b.id !== id));
+      onRefreshFolders(); // Items count might change
     } catch (err) {
       console.error('Error deleting bookmark:', err);
     }
@@ -78,6 +69,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       const nextState = !currentArchived;
       await bookmarkService.updateBookmark(bookmarkId, { isArchived: nextState });
       setBookmarks(prev => prev.filter(b => b.id !== bookmarkId));
+      onRefreshFolders(); // Items count might change
     } catch (err) {
       console.error('Error archiving bookmark:', err);
     }
@@ -89,10 +81,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({
       if (folderId !== newFolderId) {
         setBookmarks(prev => prev.filter(b => b.id !== bookmarkId));
       }
+      onRefreshFolders(); // Items count changed
     } catch (err) {
       console.error('Error moving bookmark:', err);
     }
   };
+
 
   const filteredBookmarks = bookmarks.filter(b => {
     const q = searchQuery.toLowerCase();

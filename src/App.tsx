@@ -1,38 +1,42 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { HomeScreen } from './screens/HomeScreen';
 import { AddBookmarkScreen } from './screens/AddBookmarkScreen';
 import { AuthScreen } from './screens/AuthScreen';
 import { MainLayout } from './components/MainLayout';
-import { Bookmark } from './types';
+import { Bookmark, Folder } from './types';
 import { motion, AnimatePresence } from 'motion/react';
-import { supabase } from './lib/supabase';
-import { Session } from '@supabase/supabase-js';
 import { LogOut, User } from 'lucide-react';
+import { bookmarkService } from './services/bookmarkService';
+import { useSession, signOut } from './lib/auth';
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data: sessionData, isPending: loading } = useSession();
+  const session = sessionData;
   const [editingBookmark, setEditingBookmark] = useState<Bookmark | null>(null);
+  
+  // App State: Folders
+  const [folders, setFolders] = useState<Folder[]>([]);
   
   // Navigation State
   const [currentView, setCurrentView] = useState<'home' | 'add' | 'profile'>('home');
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [isArchivedView, setIsArchivedView] = useState(false);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
+  const fetchFolders = useCallback(async () => {
+    try {
+      const data = await bookmarkService.getFolders();
+      setFolders(data);
+    } catch (err) {
+      console.error('Failed to fetch folders in App:', err);
+    }
   }, []);
+
+  useEffect(() => {
+    if (session) {
+      fetchFolders();
+    }
+  }, [session, fetchFolders]);
+
 
   if (loading) {
     return <div className="min-h-screen bg-[#f9f9f9] dark:bg-slate-950 flex items-center justify-center">
@@ -61,6 +65,7 @@ export default function App() {
       case 'home':
         return (
           <HomeScreen 
+            folders={folders}
             folderId={selectedFolderId}
             isArchived={isArchivedView}
             onAddClick={() => setCurrentView('add')}
@@ -68,15 +73,18 @@ export default function App() {
               setEditingBookmark(bm);
               setCurrentView('add');
             }}
+            onRefreshFolders={fetchFolders}
           />
         );
       case 'add':
         return (
           <AddBookmarkScreen 
+            folders={folders}
             initialBookmark={editingBookmark}
             onClose={() => {
               setEditingBookmark(null);
               setCurrentView('home');
+              fetchFolders(); // Refresh in case bookmark moved changed item counts
             }} 
           />
         );
@@ -90,13 +98,14 @@ export default function App() {
             <p className="text-slate-500 mb-10">{session.user.email}</p>
             
             <button
-              onClick={() => supabase.auth.signOut()}
+              onClick={() => signOut()}
               className="flex items-center justify-center gap-3 w-full max-w-sm mx-auto py-4 bg-red-50 dark:bg-red-900/10 text-red-600 rounded-2xl font-bold hover:bg-red-100 transition-colors"
             >
               <LogOut size={20} />
               Sign Out
             </button>
           </div>
+
         );
     }
   };
@@ -107,6 +116,9 @@ export default function App() {
       onSelectArchived={handleSelectArchived}
       activeFolderId={selectedFolderId}
       isArchivedActive={isArchivedView}
+      folders={folders}
+      onFoldersChange={setFolders}
+      onRefreshFolders={fetchFolders}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -123,3 +135,4 @@ export default function App() {
     </MainLayout>
   );
 }
+

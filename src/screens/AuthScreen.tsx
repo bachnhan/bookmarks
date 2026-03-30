@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
 import { motion } from 'motion/react';
 import { Lock, Mail, KeyRound, Loader2 } from 'lucide-react';
+import { signIn, signUp } from '../lib/auth';
 
 export function AuthScreen() {
   const [email, setEmail] = useState('');
@@ -15,27 +15,35 @@ export function AuthScreen() {
     setLoading(true);
     setMessage({ text: '', type: '' });
 
-    if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      if (error) {
-        setMessage({ text: error.message, type: 'error' });
+    try {
+      if (isSignUp) {
+        const { error } = await signUp.email({
+          email,
+          password,
+          name: email.split('@')[0], // Basic name from email
+        });
+        if (error) {
+          setMessage({ text: error.message || 'Failed to sign up', type: 'error' });
+        } else {
+          setMessage({ text: 'Account created! Please sign in.', type: 'success' });
+          setIsSignUp(false);
+        }
       } else {
-        setMessage({ text: 'Check your email for the confirmation link!', type: 'success' });
+        const { error } = await signIn.email({
+          email,
+          password,
+        });
+        if (error) {
+          setMessage({ text: error.message || 'Failed to sign in', type: 'error' });
+        }
       }
-    } else {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) {
-        setMessage({ text: error.message, type: 'error' });
-      }
+    } catch (err: any) {
+      setMessage({ text: err.message || 'An unexpected error occurred', type: 'error' });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
+
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center justify-center p-6 selection:bg-blue-100">

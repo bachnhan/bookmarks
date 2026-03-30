@@ -6,30 +6,21 @@ import { Bookmark, Folder } from '../types';
 
 interface AddBookmarkScreenProps {
   onClose: () => void;
-  initialBookmark?: Bookmark | null; // Existing bookmark to edit
+  initialBookmark?: Bookmark | null;
+  folders: Folder[];
 }
 
-export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ onClose, initialBookmark }) => {
+export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ 
+  onClose, 
+  initialBookmark,
+  folders = []
+}) => {
   const [url, setUrl] = useState(initialBookmark?.url || '');
   const [title, setTitle] = useState(initialBookmark?.title || '');
   const [description, setDescription] = useState(initialBookmark?.description || '');
   const [folderId, setFolderId] = useState(initialBookmark?.folder_id || '');
-  const [folders, setFolders] = useState<Folder[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchFolders();
-  }, []);
-
-  const fetchFolders = async () => {
-    try {
-      const data = await bookmarkService.getFolders();
-      setFolders(data);
-    } catch (err) {
-      console.error('Failed to load folders:', err);
-    }
-  };
 
   const handleSave = async () => {
     if (!url) return;
@@ -42,7 +33,7 @@ export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ onClose, i
           source = new URL(url).hostname.replace('www.', '');
         }
       } catch (e) {
-        // Fallback to Web if URL is invalid
+        // Fallback
       }
 
       if (initialBookmark) {
@@ -72,6 +63,7 @@ export const AddBookmarkScreen: React.FC<AddBookmarkScreenProps> = ({ onClose, i
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-24">
